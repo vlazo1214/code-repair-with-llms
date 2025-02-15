@@ -1,50 +1,31 @@
 import os
-import difflib
+import subprocess
 import shutil
 
 class PatchValidation:
-    def __init__(self, patch_dir="patch_candidates", reference_file="fixed_code.java"):
-        self.patch_dir = patch_dir
-        self.reference_file = reference_file
+    def __init__(self, patch_file="patch_candidates/patch_candidate_1.java"):
+        self.patch_file = patch_file
 
-    def validate_patches(self):
-        if not os.path.exists(self.reference_file):
-            print(f"Reference file '{self.reference_file}' does not exist.")
+    def validate_patch(self):
+        if not os.path.exists(self.patch_file):
+            print(f"Patch file '{self.patch_file}' does not exist.")
             return None
 
-        patch_files = [f for f in os.listdir(self.patch_dir) if f.endswith(".java")]
-        if not patch_files:
-            print("No patch candidates found.")
+        print(f"Compiling patch file: {self.patch_file}...")
+
+        # Run the Java compiler
+        result = subprocess.run(["javac", self.patch_file], capture_output=True, text=True)
+
+        if result.returncode != 0:
+            print(f"Error compiling {self.patch_file}:")
+            print(result.stderr)
             return None
-
-        print(f"Found {len(patch_files)} patch candidates. Validating patches...")
-
-        with open(self.reference_file, "r") as ref_file:
-            reference_code = ref_file.read()
-
-        best_patch = None
-        best_similarity = 0.0
-
-        for patch_file in patch_files:
-            patch_path = os.path.join(self.patch_dir, patch_file)
-
-            with open(patch_path, "r") as patch:
-                patch_code = patch.read()
-
-            # Compute similarity ratio
-            sm = difflib.SequenceMatcher(None, reference_code, patch_code)
-            similarity = sm.ratio()
-
-            print(f"Patch {patch_file} similarity: {similarity:.4f}")
-
-            if similarity > best_similarity:
-                best_similarity = similarity
-                best_patch = patch_file
-
-        if best_patch:
-            print(f"Best patch is {best_patch} with similarity {best_similarity:.4f}")
-            shutil.copy(os.path.join(self.patch_dir, best_patch), "best_patch.java")
-            return best_patch
         else:
-            print("No valid patch found.")
-            return None
+            print(f"{self.patch_file} compiled successfully and is good to go!")
+            shutil.copy(self.patch_file, "best_patch.java")
+            return self.patch_file
+
+# Example usage:
+if __name__ == "__main__":
+    validator = PatchValidation()  # Uses the default patch file.
+    validator.validate_patch()

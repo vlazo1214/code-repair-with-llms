@@ -114,7 +114,7 @@ def main():
     pipeline = Pipeline()
     
     # process file input
-    code_dict = create_code_dict('C:\\Users\\Gavin Cruz\\Documents\\SD1\\finalspace\\code-repair-with-llms\\source\\pipeline\\00_initial_java.json')
+    code_dict = create_code_dict('C:\\Users\\micha\\OneDrive\\Desktop\\Projects\\code-repair-with-llms\\source\\pipeline\\00_initial_java.json')
 
     # Extract pre_code and post_code from the first entry for demonstration purposes
     pre_code = code_dict[0]['precode']
@@ -128,16 +128,16 @@ def main():
     # set the model to whatever the selection is
     pipeline.set_model("meta-llama/Meta-Llama-3-8B-Instruct")
 
-    file_path = "C:\\Users\\Gavin Cruz\\Documents\\SD1\\finalspace\\code-repair-with-llms\\ObjectArrayCodec.java"
+    file_path = "C:\\Users\\micha\\OneDrive\\Desktop\\Projects\\code-repair-with-llms\\ObjectArrayCodec.java"
     with open(file_path, 'r') as file:
         code_content = file.read()
 
-    pipeline.set_rag()
-    code_files = [{
-        "filename": "ObjectArrayCodec.java",
-        "content": code_content
-    }]
-    pipeline.rag.embed_code(code_files)
+    # pipeline.set_rag()
+    # code_files = [{
+    #     "filename": "ObjectArrayCodec.java",
+    #     "content": code_content
+    # }]
+    # pipeline.rag.embed_code(code_files)
 
     # Fault localization
     write_to_file("#### Fault Localization ####\n")
