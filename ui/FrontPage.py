@@ -1,5 +1,13 @@
 import gradio
 import os
+import sys
+
+sys.path.insert(0, os.path.abspath("./"))
+
+from source.api_calls.initiate_pipeline_call import initiate_pipeline_call
+from utils.process_steps import process_steps
+
+pipeline_steps = 21
 
 class FrontPage:
     def __init__(self):
@@ -22,10 +30,11 @@ class FrontPage:
 
             output = gradio.Code(label="Processed Output", language="python", elem_classes=["fixed-height"])
 
+            pipeline_steps_input = gradio.Number(value=pipeline_steps, label="Pipeline Steps")
+
             file_input.change(fn=self.display_file_content, inputs=[file_input], outputs=[file_content])
-            process_button.click(fn=self.process_file, 
-                                 inputs=[file_input, language_input], 
-                                 outputs=[stage1, stage2, stage3, stage4, output])
+            process_button.click(fn=self.initiate_pipeline, 
+                                 inputs=[file_input, language_input, pipeline_steps_input], outputs=[])
 
     def custom_css(self):
         return """
@@ -55,6 +64,20 @@ class FrontPage:
         except Exception as e:
             return f"An error occurred while reading the file: {str(e)}"
 
+
+    def initiate_pipeline(self, file_input, language_input, pipeline_steps):
+        if file_input is None or (isinstance(file_input, list) and len(file_input) == 0):
+            return "No file uploaded."
+
+        self.process_file(file_input, language_input)
+        
+        # If file_input is a list, take the first file
+        if isinstance(file_input, list):
+            file_input = file_input[0]
+            
+        print(f"Processing file: {file_input}")
+        return initiate_pipeline_call(file_input, pipeline_steps)
+    
     def process_file(self, file, language):
         if file is None:
             return "Skipped", "Skipped", "Skipped", "Skipped", "Please upload a file."
