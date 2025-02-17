@@ -1,9 +1,10 @@
-import gradio
-from ui.FrontPage import FrontPage
+import gradio as gr
+from components.front_page import create_full_ui
 
-def main():
-    front_page = FrontPage()
-    front_page.page.launch()
+# Create the UI
+app = create_full_ui()
 
+# Launch the app
 if __name__ == "__main__":
-    main()
+    app.launch(show_api=False)
+

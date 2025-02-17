@@ -3,14 +3,46 @@
 
 def custom_css():
     return """
-    .fixed-height {
+    .fixed-height 
+    {
         height: 300px !important;
         overflow-y: auto !important;
     }
-    .stage-box {
+
+    .stage-box 
+    {
         text-align: center !important;
         font-weight: bold !important;
     }
+
+    .title 
+    { 
+        text-align: center; 
+        font-size: 2rem; 
+        font-weight: bold; 
+    }
+
+    .subtitle 
+    { 
+        text-align: center;
+        font-size: 1.2rem;
+    }
+
+    .big-checkboxes label 
+    { 
+        font-size: 1.5rem;
+        display: block; 
+        text-align: center;
+    }
+
+    .big-button 
+    { 
+        font-size: 1.5rem; 
+        padding: 10px 20px; 
+        display: block; 
+        margin: 0 auto; 
+    }
+
     """
 
 def display_file_content(file):
