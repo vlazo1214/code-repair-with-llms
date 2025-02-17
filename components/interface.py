@@ -19,9 +19,6 @@ def create_interface():
                 gr.Markdown("")  # Filler to push logo to the right
                 gr.Image("logo.png", label="Logo", show_download_button=False, show_fullscreen_button=False, show_label=False, height=250, width=450, container=False)
 
-            # File Upload and Display (Side by Side, Full Width)
-            file_input, file_content = create_file_upload_section()
-
             # Tabs for Different Features
             with gr.Tab("Chat"):
                 create_bug_finding_tab(choices)
