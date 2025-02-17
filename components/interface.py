@@ -9,7 +9,7 @@ from components.patch_validation import create_patch_validation_tab
 from components.file_upload import create_file_upload_section
 
 def create_interface():
-    choices = [file for file in os.listdir('./models')]
+    choices = {"ChatGPT", "Claude"}
 
     with gr.Blocks(css=iutils.custom_css()) as interface:
         with gr.Column():
