@@ -1,4 +1,5 @@
 import os
+import re
 
 class PatchGeneration:
     def __init__(self, model, file_contents: str, patterns):
@@ -12,9 +13,12 @@ class PatchGeneration:
         Using the file contents provided (Labeled as file_contents), you will generate a patch file based on the pattern provided.
         The pattern is a fixed vulnerability of a code block inside the file contents.
         
-        Don't add any additional text or formatting, return only the file contents WITH the fix from the pattern.
-        
-        Make sure to use the pattern fix with the file contents. Only use the code portions from the pattern fix.
+        Use this format:
+        ```
+        Provide the code implementation here
+        ```
+
+        Make sure to keep the code format consistent, there should always be an opening ``` and closing ```.
         
         file_contents: {file_contents}
         pattern: {pattern}
@@ -31,7 +35,7 @@ class PatchGeneration:
             response = self.model.generate_response(prompt)
 
             # Update the current file contents with the latest patch
-            current_file_contents = response
+            current_file_contents = self.return_code_block(response)
 
             # Save the patch to a file
             patch_file_name = os.path.join(self.patch_candidates_dir, f"patch_candidate_{idx + 1}.java")
@@ -39,6 +43,14 @@ class PatchGeneration:
                 patch_file.write(response)
 
         print(f"Generated {len(self.patterns)} patch candidate files in '{self.patch_candidates_dir}'.")
+        
+    def return_code_block(self, text: str) -> str:
+        # regex pattern to match text between triple backticks
+        pattern = r"```(?:[a-zA-Z]*)?\r?\n([\s\S]*?)```"
+
+        # find first match and return only the code content (group 2)
+        match = re.search(pattern, text)
+        return match.group(1) if match else ""
 
 # Example usage
 if __name__ == "__main__":
