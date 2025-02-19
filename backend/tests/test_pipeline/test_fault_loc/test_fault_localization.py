@@ -11,9 +11,10 @@ class TestFaultLocalization(unittest.TestCase):
         # Create a mock model
         self.mock_model = Mock()
         self.mock_model.max_context = 1000
+        self.mock_model.max_response = 750
         self.mock_model.tokenizer = Mock()
         self.mock_model.generate_response = Mock()
-        
+
         # Sample code content
         self.sample_code = "def test_function():\n    pass"
         
@@ -140,6 +141,7 @@ class TestFaultLocalization(unittest.TestCase):
         
         with self.assertRaises(Exception):
             self.fault_loc._chunk_code()
+
 
 if __name__ == '__main__':
     unittest.main()
