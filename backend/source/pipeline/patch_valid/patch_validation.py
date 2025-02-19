@@ -1,51 +1,187 @@
-import os
-import difflib
-import shutil
-from typing import Optional
+import re
+from typing import Optional, Any
 
 class PatchValidation:
-    def __init__(self, patch_dir: str = "patch_candidates", reference_file: str = "fixed_code.java") -> None:
+    def __init__(self, model: Any, patch_dir: str = "patch_candidates", faults: Optional[str] = None, language: Optional[str] = None) -> None:
+        self.model = model
         self.patch_dir = patch_dir
-        self.reference_file = reference_file
+        self.faults = faults
+        self.language = language
 
-    def validate_patches(self) -> Optional[str]:
-        if not os.path.exists(self.reference_file):
-            print(f"Reference file '{self.reference_file}' does not exist.")
-            return None
+    def parse_llm_response(self, response: str):
+        """Extracts the status, issues, corrections, and explanation from LLM responses consistently."""
+        
+        # Normalize response formatting
+        response = response.strip()
 
-        patch_files = [f for f in os.listdir(self.patch_dir) if f.endswith(".java")]
-        if not patch_files:
-            print("No patch candidates found.")
-            return None
+        # Capture Status (GOOD / BAD) robustly
+        status_match = re.search(r"(?i)\*\*Status\**[:\s]*\**\s*(GOOD|BAD)", response)
+        status = status_match.group(1).upper() if status_match else "UNKNOWN"
 
-        print(f"Found {len(patch_files)} patch candidates. Validating patches...")
+        # Capture Issues, Corrections, and Explanation
+        issues_match = re.search(r"(?i)\*\*Issues\**:\*\*\s*(.*?)(?=\n\n\*\*Corrections\*\*|\n\n\*\*Explanation\*\*|$)", response, re.DOTALL)
+        corrections_match = re.search(r"(?i)\*\*Corrections\**:\*\*\s*(.*?)(?=\n\n\*\*Explanation\*\*|$)", response, re.DOTALL)
+        explanation_match = re.search(r"(?i)\*\*Explanation\**:\*\*\s*(.*)", response, re.DOTALL)
 
-        with open(self.reference_file, "r") as ref_file:
-            reference_code = ref_file.read()
+        issues = issues_match.group(1).strip() if issues_match else "None provided"
+        corrections = corrections_match.group(1).strip() if corrections_match else "None provided"
+        explanation = explanation_match.group(1).strip() if explanation_match else "None provided"
 
-        best_patch = None
-        best_similarity = 0.0
+        return status, issues, corrections, explanation
+    
+    def resolve_sytnax_errors(self, code: str):
+        return f"""
+        You are a software engineer. Analyze the following code and correct any syntax and grammatical errors.
 
-        for patch_file in patch_files:
-            patch_path = os.path.join(self.patch_dir, patch_file)
+        **Code:**  
+        ```{self.language}
+        {code}  
+        ```  
 
-            with open(patch_path, "r") as patch:
-                patch_code = patch.read()
+        Output:
+        ```{self.language}
+        // Provide the detailed code implementation here
+        ```
+        """
 
-            # Compute similarity ratio
-            sm = difflib.SequenceMatcher(None, reference_code, patch_code)
-            similarity = sm.ratio()
+    def get_validation_prompt(self, file_content: str):
+        return f"""
+### **Strict Code Review and Fault Verification Task**
 
-            print(f"Patch {patch_file} similarity: {similarity:.4f}")
+#### **Objective:**
+You are an expert-level code reviewer with advanced knowledge of `{self.language}`. Your task is to **rigorously analyze** the provided code for correctness, security vulnerabilities, and efficiency. Additionally, this code has previously been modified by an LLM to address specific faults. Your primary goal is to determine whether these faults were fully resolved and to conduct an in-depth review based on strict evaluation criteria.
 
-            if similarity > best_similarity:
-                best_similarity = similarity
-                best_patch = patch_file
+---
 
-        if best_patch:
-            print(f"Best patch is {best_patch} with similarity {best_similarity:.4f}")
-            shutil.copy(os.path.join(self.patch_dir, best_patch), "best_patch.java")
-            return best_patch
+Here is the file to examine:
+{file_content}
+
+### **Evaluation Criteria:**
+
+1. **Compilation & Syntax Validation:**  
+   - Ensure that the code compiles successfully in `{self.language}` without syntax errors.  
+   - If compilation issues exist, identify the exact errors (with line numbers where possible) and suggest corrections.
+
+2. **Security Audit (Covers All Possible Vulnerabilities):**  
+   - Identify and report **any** security vulnerabilities in the code, including but not limited to:
+     - **Injection Attacks** (SQL injection, command injection, template injection)
+     - **Memory Corruption** (buffer overflows, use-after-free, double-free)
+     - **Authentication & Authorization Issues** (broken authentication, privilege escalation)
+     - **Insecure Data Handling** (hardcoded credentials, weak encryption, improper input validation)
+     - **Denial of Service (DoS) Risks** (inefficient loops, uncontrolled recursion, excessive resource consumption)
+     - **Race Conditions** (multi-threading issues, improper locking mechanisms)
+     - **Supply Chain Risks** (unsafe dependencies, reliance on untrusted libraries)
+   - Assess whether secure coding practices were followed for `{self.language}`.
+
+3. **Best Practices & Code Maintainability:**  
+   - Ensure the code adheres to `{self.language}`’s best practices:
+     - **Modular design**: Proper function/class usage.
+     - **Readability**: Proper naming conventions and formatting.
+     - **Avoidance of redundant or inefficient logic**.
+   - Identify **code smells**, unnecessary complexity, or performance bottlenecks.
+
+4. **Logical & Functional Correctness:**  
+   - Verify that the code performs **exactly** as intended without unexpected behavior.
+   - Test against potential **edge cases** to determine robustness.
+   - Assess **algorithmic efficiency** and suggest improvements if necessary.
+
+5. **Fault Resolution Verification:**  
+   - Examine the provided **list of faults** that were previously addressed.  
+   - Determine if each issue was **fully resolved, partially resolved, or still present**.  
+   - Provide **explicit justification** for each fault's resolution status.
+
+---
+
+### **Response Format (STRICTLY FOLLOW THIS STRUCTURE):**
+
+**Status:** `[GOOD / BAD]`  
+*(Choose GOOD if all faults were resolved and the code meets all evaluation criteria. Choose BAD if any issues remain.)*
+
+**Issues:**  
+```
+[List all detected issues with explanations, or explicitly state "None" if the code is flawless.]
+```
+
+**Security Vulnerabilities Found:**  
+```
+[List all security vulnerabilities present in the code. If none exist, explicitly state "None."]
+```
+
+**Corrections:**  
+```
+[If necessary, provide a corrected version of the code in a properly formatted block, ensuring it remains fully functional, secure, and optimized.]
+```
+
+**Explanation:**  
+```
+[Provide a concise but detailed explanation, linking identified issues to best practices, security concerns, or logical flaws.]
+```
+
+---
+
+### **Additional Requirements:**
+
+1. **Code Formatting & Clarity:**  
+   - Any modified code must be returned in a **properly formatted** code block.
+   - Ensure **syntax highlighting** and **preserve indentation**.
+
+2. **Strict Compilation & Execution Enforcement:**  
+   - If errors exist, the corrected version **must** be executable **as-is** in `{self.language}` without further modification.
+   - The LLM **must verify that the suggested corrections will compile and run correctly**.
+
+3. **Comprehensive Security Assessment:**  
+   - The analysis **must cover all potential vulnerabilities**, even if they were not explicitly mentioned in the faults.
+   - **Do not assume the original fault list is exhaustive**—new vulnerabilities may exist.
+
+4. **Precision & Depth:**  
+   - Be **highly specific** with identified issues (include line numbers where possible).
+   - Avoid generic advice—base all feedback on `{self.language}` best practices and security guidelines.
+
+---
+        """
+
+    # prompts llm about the current file
+    def validate_patches(self):
+        code_content = ""
+        with open(f"{self.patch_dir}/iterative_patch.{self.language}", "r", encoding='utf-8') as file:
+            code_content = file.read()
+
+        # get validation prompt
+        prompt = self.get_validation_prompt(code_content)
+        response = self.model.generate_response(prompt)
+
+        status, issues, corrections, explanation = self.parse_llm_response(response)
+        if status == "GOOD":
+            # compile the file to ensure no errors
+            try:
+                if self.language == "python":
+                    # For Python, we can use compile() to check syntax
+                    compile(code_content, f"{self.patch_dir}/iterative_patch.{self.language}", 'exec')
+                elif self.language == "java":
+                    # For Java, we would need to use javac
+                    import subprocess
+                    result = subprocess.run(["javac", "-Xlint", f"{self.patch_dir}/iterative_patch.{self.language}"], 
+                                        capture_output=True, 
+                                        text=True)
+                    if result.returncode != 0:
+                        # ask the llm to resolve all syntax and grammar errors
+                        with open(f"{self.patch_dir}/iterative_patch.{self.language}", "r", encoding="utf-8") as file:
+                            code_content = file.read()
+                        prompt = self.resolve_sytnax_errors(code_content)
+                        response = self.model.generate_response(prompt)
+                        code_content = self.return_code_block(response)
+                        with open(f"{self.patch_dir}/iterative_patch.{self.language}", "w", encoding="utf-8") as file:
+                            file.write(code_content)
+                        result = subprocess.run(["javac", "-Xlint", f"{self.patch_dir}/iterative_patch.{self.language}"], 
+                                        capture_output=True, 
+                                        text=True)
+                        if result.returncode != 0:
+                            raise ValueError(f"Compilation failed: {result.stderr}")
+                # Add more language-specific compilation checks as needed
+                
+                return status, issues, corrections, explanation
+            except Exception as e:
+                # If compilation fails, return None
+                raise ValueError(f"Compilation failed: {str(e)}")
         else:
-            print("No valid patch found.")
-            return None
+            return status, issues, corrections, explanation

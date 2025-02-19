@@ -13,7 +13,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'
 from source.model.model import Model
 
 # global values for testing
-API_KEY = os.getenv("OPENROUTER_API_KEY", "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")  # Better to use environment variable
+API_KEY = os.getenv("OPENROUTER_API_KEY", "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")  # Better to use environment variable
 PROVIDER = "openrouter"
 MODEL_NAME = "meta-llama/llama-3-8b-instruct:free"  # Model name without provider prefix
 
@@ -57,13 +57,13 @@ class Pipeline:
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
-        pg = PatchGeneration(self.model, precode_content, patterns)
+        pg = PatchGeneration(self.model, precode_content, patterns, "java")
         pg.create_patch_files()
         return output_dir
 
     # last stage determines if the fixes are corrected
-    def patch_validation(self, fixed_code_path: str) -> Any:
-        validator = PatchValidation(reference_file=fixed_code_path)
+    def patch_validation(self, faults: str) -> Any:
+        validator = PatchValidation(self.model, patch_dir="patch_candidates", faults=faults, language="java")
         return validator.validate_patches()
 
 def create_code_dict(file_path: str) -> List[Dict[str, str]]:
@@ -117,7 +117,9 @@ def main() -> None:
     pipeline = Pipeline()
 
     # set model test=true to set model to openrouter free version under gcopro account. unlimited and free but untrained and poor results
-    pipeline.set_model(test=True)
+    #pipeline.set_model(model_selection="accounts/eriktajti-a69f1e/deployedModels/my-lora-llama31-8b-b6df4d49", api_key="fw_3ZhhWY3zea3May74cgPSqU4r", provider="fireworks")
+    #pipeline.set_model(test=True)
+    pipeline.set_model(model_selection="google/gemini-2.0-flash-001", api_key="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", provider="openrouter")
 
     file_path = "C:\\Users\\Gavin Cruz\\Documents\\SD1\\finalspace\\code-repair-with-llms\\javafile.java" # for others change this to your file path
     with open(file_path, 'r') as file:
@@ -152,13 +154,16 @@ def main() -> None:
     write_to_file(f"Patch candidates written to directory: {patch_dir}")
 
     # Patch validation using the post_code as the reference
-    fixed_code_path = ""
     write_to_file("\n#### Patch Validation ####\n")
-    best_patch = pipeline.patch_validation(fixed_code_path)
-    if best_patch:
-        write_to_file(f"Best patch selected: {best_patch}")
-    else:
-        write_to_file("No valid patch found.")
+    status, issues, corrections, explanation = pipeline.patch_validation(localization)
+    write_to_file(status)
+    write_to_file("\n+++++++++++++++++++\n")
+    write_to_file(issues)
+    write_to_file("\n+++++++++++++++++++\n")
+    write_to_file(corrections)
+    write_to_file("\n+++++++++++++++++++\n")
+    write_to_file(explanation)
+    write_to_file("\n+++++++++++++++++++\n")
 
 if __name__ == "__main__":
     main()

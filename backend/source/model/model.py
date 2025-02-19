@@ -16,7 +16,7 @@ class Model:
             self.model: str = "meta-llama/llama-3-8b-instruct:free"
             self.provider: str = "openrouter"
             self.api_key: str = os.getenv("OPENROUTER_API_KEY", 
-                "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")
+                "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")
         else:
             self.model = model if model is not None else ""
             self.provider = provider if provider is not None else ""
@@ -59,7 +59,7 @@ class Model:
     def initialize_client(self) -> Dict[str, str]:
         provider_configs: Dict[str, Dict[str, str]] = {
             "openrouter": {"base_url": "https://openrouter.ai/api/v1", "model_prefix": "openrouter/"},
-            "fireworks": {"base_url": "https://api.fireworks.ai/v1", "model_prefix": "fireworks/"},
+            "fireworks": {"base_url": "https://api.fireworks.ai/inference/v1", "model_prefix": "fireworks_ai/"},  # Updated base URL
             "openai": {"base_url": "https://api.openai.com/v1", "model_prefix": ""},
             "huggingface": {"base_url": "https://api-inference.huggingface.co/models", "model_prefix": "huggingface/"}
         }
@@ -76,6 +76,7 @@ class Model:
             "model_prefix": config["model_prefix"]
         }
 
+
     def generate_response(self, prompt: str) -> str:
         if not self.client:
             return "Error: Client configuration is required."
@@ -85,8 +86,7 @@ class Model:
             response = litellm.completion(
                 model=formatted_model,
                 messages=[{"role": "user", "content": prompt}],
-                api_key=self.client["api_key"],
-                base_url=self.client["base_url"]
+                api_key=self.client["api_key"]
             )
             return response.choices[0].message.content if response.choices else ""
         except Exception as e:

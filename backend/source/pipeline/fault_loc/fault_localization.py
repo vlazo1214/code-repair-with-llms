@@ -3,6 +3,7 @@ from typing import List, Tuple, Optional, Any
 from transformers import AutoTokenizer
 from huggingface_hub import InferenceClient
 import os
+import logging
 
 class FaultLocalization:
     def __init__(self, model: Any, file_contents: str) -> None:
@@ -27,58 +28,58 @@ class FaultLocalization:
     
     def get_prompt(self, code: str) -> str:
         return f"""
-Analyze the following code file to identify any vulnerabilities or faults. For each identified issue, provide 
-the analysis using the following structured format:
+        Analyze the following code file to identify any vulnerabilities or faults. For each identified issue, provide 
+        the analysis using the following structured format:
 
-### High-Level Overview:
-- Provide a clear, explicit summary of what the file is doing, including its purpose and functionality.
+        ### High-Level Overview:
+        - Provide a clear, explicit summary of what the file is doing, including its purpose and functionality.
 
-### Detected Faults:
-For each fault or vulnerability, use this consistent structure:
+        ### Detected Faults:
+        For each fault or vulnerability, use this consistent structure:
 
-#### Fault 1:
-- **Fault Detected**: [Brief description of the issue]
-- **Cause**: [Explain what part of the code is causing the issue and why]
-- **Impact**: [Outline the potential consequences of this fault on the program’s functionality or security]
-- **Solution**: [Provide a detailed suggestion or fix to resolve the issue]
+        #### Fault 1:
+        - **Fault Detected**: [Brief description of the issue]
+        - **Cause**: [Explain what part of the code is causing the issue and why]
+        - **Impact**: [Outline the potential consequences of this fault on the program’s functionality or security]
+        - **Solution**: [Provide a detailed suggestion or fix to resolve the issue but do not include a code block just an explanation]
 
-Repeat the above format (Fault 2, Fault 3, etc.) for additional issues if applicable. If no faults are detected, 
-explicitly state that the code appears to be fault-free.
+        Repeat the above format (Fault 2, Fault 3, etc.) for additional issues if applicable. If no faults are detected, 
+        explicitly state that the code appears to be fault-free.
 
-### Output Requirements:
-- Use bullet points and section headers for clarity.
-- Ensure all explanations are concise, actionable, and easy to understand.
+        ### Output Requirements:
+        - Use bullet points and section headers for clarity.
+        - Ensure all explanations are concise, actionable, and easy to understand.
 
-Here is the code: 
-{code}
+        Here is the code: 
+        {code}
         """
     
     def clean_response(self, response: str) -> str:
         return f"""
-Refine the following fault analysis to adhere to the structured format:
+        Refine the following fault analysis to adhere to the structured format:
 
-### High-Level Overview:
-- Ensure the summary accurately reflects the file’s purpose and functionality.
+        ### High-Level Overview:
+        - Ensure the summary accurately reflects the file’s purpose and functionality.
 
-### Detected Faults:
-For each identified fault, follow this structure:
+        ### Detected Faults:
+        For each identified fault, follow this structure:
 
-#### Fault 1:
-- **Fault Detected**: Ensure the description is precise and clear.
-- **Cause**: Provide a detailed yet concise explanation of the root cause.
-- **Impact**: Clarify the potential risks or consequences of the issue.
-- **Solution**: Ensure the solution is actionable and easy to implement.
+        #### Fault 1:
+        - **Fault Detected**: Ensure the description is precise and clear.
+        - **Cause**: Provide a detailed yet concise explanation of the root cause.
+        - **Impact**: Clarify the potential risks or consequences of the issue.
+        - **Solution**: Ensure the solution is actionable and easy to implement.
 
-Repeat for additional faults (Fault 2, Fault 3, etc.), maintaining clarity and consistency. If no faults are detected, 
-explicitly state that the code appears to be fault-free.
+        Repeat for additional faults (Fault 2, Fault 3, etc.), maintaining clarity and consistency. If no faults are detected, 
+        explicitly state that the code appears to be fault-free.
 
-### Output Requirements:
-- Improve readability and structure.
-- Enhance clarity and comprehensiveness.
-- Maintain consistency in formatting and terminology.
+        ### Output Requirements:
+        - Improve readability and structure.
+        - Enhance clarity and comprehensiveness.
+        - Maintain consistency in formatting and terminology.
 
-Here is the analysis:
-{response}
+        Here is the analysis:
+        {response}
         """
     
     def calculate_fault_localization(self) -> None:

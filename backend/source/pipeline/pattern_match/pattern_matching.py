@@ -19,6 +19,7 @@ class PatternMatch:
         {context}
 
         Now, generate the solution based on the above fault and context, but only return the structured implementation.
+        The solution should just be the small code change and not the entire file. Be sure to follow this guideline.
 
         ### High-Level Explanation:
         /// Concise and short explanation goes here
