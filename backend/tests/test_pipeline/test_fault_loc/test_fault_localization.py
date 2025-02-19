@@ -28,7 +28,7 @@ class TestFaultLocalization(unittest.TestCase):
         """Test proper initialization of FaultLocalization"""
         self.assertEqual(self.fault_loc.model, self.mock_model)
         self.assertEqual(self.fault_loc.file_contents, self.sample_code)
-        self.assertEqual(self.fault_loc.max_response, 750)  # 1000 - 250
+        self.assertEqual(self.fault_loc.max_response, 500)  # 750 - 250
         self.assertIsNone(self.fault_loc.fault_localization)
         self.assertIsInstance(self.fault_loc.chunks, list)
 
