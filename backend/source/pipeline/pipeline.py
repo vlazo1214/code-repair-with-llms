@@ -12,6 +12,12 @@ from patch_valid.patch_validation import PatchValidation
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from source.model.model import Model
 
+# global values for testing
+API_KEY = os.getenv("OPENROUTER_API_KEY", "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")  # Better to use environment variable
+PROVIDER = "openrouter"
+MODEL_NAME = "meta-llama/llama-3-8b-instruct:free"  # Model name without provider prefix
+
+
 """
 this pipeline will be the main process for the pipeline that is being integrated
 """
@@ -28,9 +34,9 @@ class Pipeline:
         self.rag = RAG()
 
     # define the model being used throughout the pipeline
-    def set_model(self, model_selection: str) -> None:
+    def set_model(self, model_selection: Optional[str] = None, api_key: Optional[str] = None, provider: Optional[str] = None, test: bool = False) -> None:
         try:
-            self.model = Model(model_selection)
+            self.model = Model(model_selection, api_key, provider, test)
         except Exception as e:
             print(f"Error setting model: {e}")
 
@@ -103,39 +109,23 @@ def create_code_dict(file_path: str) -> List[Dict[str, str]]:
     return code_dicts
 
 def write_to_file(content: str) -> None:
-    # Open the file in write mode
-    with open("output.txt", 'a') as file:
-        # Write the content to the file
+    with open("output.txt", 'a', encoding='utf-8') as file:
         file.write(content + "\n")
-        # Close the file
-        file.close()
 
 def main() -> None:
     # create pipeline
     pipeline = Pipeline()
-    
-    # process file input
-    code_dict = create_code_dict('C:\\Users\\Gavin Cruz\\Documents\\SD1\\finalspace\\code-repair-with-llms\\source\\pipeline\\00_initial_java.json')
 
-    # Extract pre_code and post_code from the first entry for demonstration purposes
-    pre_code = code_dict[0]['precode']
-    post_code = code_dict[0]['postcode']
+    # set model test=true to set model to openrouter free version under gcopro account. unlimited and free but untrained and poor results
+    pipeline.set_model(test=True)
 
-    # Save post_code to a temporary file for reference
-    fixed_code_path = "fixed_code.java"
-    with open(fixed_code_path, "w") as fixed_code_file:
-        fixed_code_file.write(post_code)
-
-    # set the model to whatever the selection is
-    pipeline.set_model("meta-llama/Meta-Llama-3-8B-Instruct")
-
-    file_path = "C:\\Users\\Gavin Cruz\\Documents\\SD1\\finalspace\\code-repair-with-llms\\ObjectArrayCodec.java"
+    file_path = "C:\\Users\\Gavin Cruz\\Documents\\SD1\\finalspace\\code-repair-with-llms\\javafile.java" # for others change this to your file path
     with open(file_path, 'r') as file:
         code_content = file.read()
 
     pipeline.set_rag()
     code_files = [{
-        "filename": "ObjectArrayCodec.java",
+        "filename": "javafile.java",
         "content": code_content
     }]
     if pipeline.rag:
@@ -162,6 +152,7 @@ def main() -> None:
     write_to_file(f"Patch candidates written to directory: {patch_dir}")
 
     # Patch validation using the post_code as the reference
+    fixed_code_path = ""
     write_to_file("\n#### Patch Validation ####\n")
     best_patch = pipeline.patch_validation(fixed_code_path)
     if best_patch:

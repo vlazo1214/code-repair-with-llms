@@ -1,35 +1,41 @@
 from transformers import AutoTokenizer
-from huggingface_hub import InferenceClient
 from typing import Dict, Any, Optional
 import json
 import os
 from pathlib import Path
-
-HF_TOKEN = "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"
+import litellm
 
 class Model:
-    def __init__(self, model: str = ""):
+    def __init__(self, model: Optional[str], api_key: Optional[str], provider: Optional[str], test: bool = False) -> None:
         # retrieves the config path and creates list of model configs
-        self.config_path = self._get_config_path()
-        self.model_configs = self._load_model_configs()
-        
-        # sets all attributes for the model
-        self.model = model
-        self.current_config = self._get_model_config(model)
-        self.tokenizer = self.get_tokenizer()
-        self.client = self.initialize_client()
-        self.max_context = self.current_config.get("max_context", 0)
-        self.max_response = self.current_config.get("max_response", 0)
+        self.config_path: Path = self._get_config_path()
+        self.model_configs: Dict[str, Any] = self._load_model_configs()
 
+        # if test true then set model to test model
+        if test:
+            self.model: str = "meta-llama/llama-3-8b-instruct:free"
+            self.provider: str = "openrouter"
+            self.api_key: str = os.getenv("OPENROUTER_API_KEY", 
+                "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")
+        else:
+            self.model = model if model is not None else ""
+            self.provider = provider if provider is not None else ""
+            self.api_key = api_key if api_key is not None else ""
 
-    """
-    Loading configurations for all potential/supported models
-    """
-    # finds config path
+        # Common initialization for both test and non-test cases
+        try:
+            self.current_config: Dict[str, Any] = self._get_model_config(self.model)
+            self.tokenizer: AutoTokenizer = self.get_tokenizer()
+            self.client: Dict[str, str] = self.initialize_client()
+            self.max_context: int = self.current_config.get("max_context", 0)
+            self.max_response: int = self.current_config.get("max_response", 0)
+        except Exception as e:
+            print(f"Error during model initialization: {str(e)}")
+            raise
+
     def _get_config_path(self) -> Path:
         return Path(__file__).parent / "model_configs.json"
 
-    # loads the configs
     def _load_model_configs(self) -> Any:
         try:
             with open(self.config_path, 'r') as f:
@@ -39,78 +45,58 @@ class Model:
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid configuration file: {str(e)}")
 
-    # based on model passed from selection, loads specific model configs
     def _get_model_config(self, model: str) -> Any:
-        if model not in self.model_configs["models"]:
+        if model not in self.model_configs.get("models", {}):
             raise ValueError(f"Unsupported model: {model}")
         return self.model_configs["models"][model]
 
-    """
-    methods for model specific functions
-    """
-    # get tokenizer for specific model
     def get_tokenizer(self) -> AutoTokenizer:
         try:
-            return AutoTokenizer.from_pretrained(self.model)
+            return AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B-Instruct")
         except Exception as e:
             raise RuntimeError(f"Failed to initialize tokenizer: {str(e)}")
 
-    # This class will be used to connect to UCF ARCC and also use the models under the inference client
-    def initialize_client(self) -> InferenceClient:
-        # add a check to see if the ARCC model is being used or online models
-        # -->
+    def initialize_client(self) -> Dict[str, str]:
+        provider_configs: Dict[str, Dict[str, str]] = {
+            "openrouter": {"base_url": "https://openrouter.ai/api/v1", "model_prefix": "openrouter/"},
+            "fireworks": {"base_url": "https://api.fireworks.ai/v1", "model_prefix": "fireworks/"},
+            "openai": {"base_url": "https://api.openai.com/v1", "model_prefix": ""},
+            "huggingface": {"base_url": "https://api-inference.huggingface.co/models", "model_prefix": "huggingface/"}
+        }
+
+        if self.provider not in provider_configs:
+            raise ValueError(f"Unsupported provider: {self.provider}")
+
+        config = provider_configs[self.provider]
+        litellm.api_key = self.api_key
+        
+        return {
+            "api_key": self.api_key,
+            "base_url": config["base_url"],
+            "model_prefix": config["model_prefix"]
+        }
+
+    def generate_response(self, prompt: str) -> str:
+        if not self.client:
+            return "Error: Client configuration is required."
+        
         try:
-            return InferenceClient(
-                self.model,
-                token=HF_TOKEN,
+            formatted_model = f"{self.client['model_prefix']}{self.model}"
+            response = litellm.completion(
+                model=formatted_model,
+                messages=[{"role": "user", "content": prompt}],
+                api_key=self.client["api_key"],
+                base_url=self.client["base_url"]
             )
+            return response.choices[0].message.content if response.choices else ""
         except Exception as e:
-            raise RuntimeError(f"Failed to initialize model client: {str(e)}")
+            return f"Error: {str(e)}"
 
-    # sets the max contraints for the windows for specific models
-    def set_constraints(self, max_context: int) -> None:
-        pass
-
-    # returns the number of tokens in given text
     def get_token_count(self, text: str) -> int:
         return len(self.tokenizer.encode(text))
 
-    # returns if the prompt can fit in the context window
-    def is_within_context_window(self, text: str) -> Any:
+    def is_within_context_window(self, text: str) -> bool:
         return self.get_token_count(text) <= self.max_context
 
-    # returns if the model can return full file in the response window
-    def is_within_response_window(self, text: str) -> Any:
+    def is_within_response_window(self, text: str) -> bool:
         return self.get_token_count(text) <= self.max_response
-
-    # generate the response based on model and config
-    def generate_response(self, prompt: str, **kwargs: Dict[str, Any]) -> Any:
-        if not self.is_within_context_window(prompt):
-            # need to chunk the input
-            pass
-
-        if not self.is_within_response_window(prompt):
-            # need to chunk the input of the source file to fit the response window equally
-            pass
-
-        try:
-            # Merge default configs with any provided kwargs
-            generation_config = {
-                "max_new_tokens": self.max_response,
-                "temperature": self.current_config["temperature"],
-                "top_k": self.current_config["top_k"],
-                "top_p": self.current_config["top_p"],
-                "do_sample": False,
-            }
-            generation_config.update(kwargs)
-
-            return self.client.text_generation(
-                prompt,
-                **generation_config
-            )
-        except Exception as e:
-            raise RuntimeError(f"Failed to generate response: {str(e)}")
-
-    # update settings for model, example top_p or temp
-    def update_model_config(self, model_name: str, config_updates: Dict[str, Any]) -> None:
-        pass

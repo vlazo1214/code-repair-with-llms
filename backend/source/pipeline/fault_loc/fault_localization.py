@@ -8,13 +8,14 @@ class FaultLocalization:
     def __init__(self, model: Any, file_contents: str) -> None:
         self.model = model  # Model object
         self.file_contents = file_contents
-        self.max_tokens = self.model.max_context - 250  # Adjust max tokens per chunk
+        self.max_context = self.model.max_context - 250
+        self.max_response = self.model.max_response - 250
         self.chunks: List[Tuple[int, str]] = self._chunk_code()
         self.fault_localization: Optional[str] = None
     
     def _chunk_code(self) -> List[Tuple[int, str]]:
         tokens = self.model.tokenizer.encode(self.file_contents, add_special_tokens=False)
-        chunk_size = self.max_tokens
+        chunk_size = self.max_response
         chunks: List[Tuple[int, str]] = []
         
         for i in range(0, len(tokens), chunk_size):
