@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import litellm
+from dotenv import load_dotenv
 
 class Model:
     def __init__(self, model: Optional[str], api_key: Optional[str], provider: Optional[str], test: bool = False) -> None:
@@ -11,12 +12,16 @@ class Model:
         self.config_path: Path = self._get_config_path()
         self.model_configs: Dict[str, Any] = self._load_model_configs()
 
+        # load api key from .env
+        load_dotenv()
+        openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+
         # if test true then set model to test model
         if test:
             self.model: str = "meta-llama/llama-3-8b-instruct:free"
             self.provider: str = "openrouter"
             self.api_key: str = os.getenv("OPENROUTER_API_KEY", 
-                "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")
+                openrouter_api_key)
         else:
             self.model = model if model is not None else ""
             self.provider = provider if provider is not None else ""

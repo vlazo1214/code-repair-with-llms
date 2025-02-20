@@ -2,6 +2,7 @@ import json
 import sys
 import os
 from typing import List, Dict, Optional, Any
+from dotenv import load_dotenv
 
 from rag.rag import RAG
 from fault_loc.fault_localization import FaultLocalization
@@ -12,8 +13,12 @@ from patch_valid.patch_validation import PatchValidation
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from source.model.model import Model
 
+# load api key from .env
+load_dotenv()
+openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+
 # global values for testing
-API_KEY = os.getenv("OPENROUTER_API_KEY", "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")  # Better to use environment variable
+API_KEY = os.getenv("OPENROUTER_API_KEY", openrouter_api_key)
 PROVIDER = "openrouter"
 MODEL_NAME = "meta-llama/llama-3-8b-instruct:free"  # Model name without provider prefix
 
@@ -119,9 +124,9 @@ def main() -> None:
     # set model test=true to set model to openrouter free version under gcopro account. unlimited and free but untrained and poor results
     #pipeline.set_model(model_selection="accounts/eriktajti-a69f1e/deployedModels/my-lora-llama31-8b-b6df4d49", api_key="fw_3ZhhWY3zea3May74cgPSqU4r", provider="fireworks")
     #pipeline.set_model(test=True)
-    pipeline.set_model(model_selection="google/gemini-2.0-flash-001", api_key="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", provider="openrouter")
+    pipeline.set_model(model_selection="google/gemini-2.0-flash-001", api_key=openrouter_api_key, provider="openrouter")
 
-    file_path = "C:\\Users\\Gavin Cruz\\Documents\\SD1\\finalspace\\code-repair-with-llms\\javafile.java" # for others change this to your file path
+    file_path = "C:\\Users\\micha\\OneDrive\\Desktop\\Projects\\code-repair-with-llms\\javafile.java" # for others change this to your file path
     with open(file_path, 'r') as file:
         code_content = file.read()
 
