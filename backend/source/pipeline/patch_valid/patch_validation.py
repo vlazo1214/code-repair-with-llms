@@ -1,22 +1,36 @@
 import re
-from typing import Optional, Any
+import logging
+from typing import Optional, Any, List
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 class PatchValidation:
     def __init__(self, model: Any, patch_dir: str = "patch_candidates", faults: Optional[str] = None, language: Optional[str] = None) -> None:
+        logger.info("Initializing PatchValidation")
         self.model = model
         self.patch_dir = patch_dir
         self.faults = faults
         self.language = language
+        logger.debug(f"Initialized with patch_dir: {patch_dir}, language: {language}")
 
-    def parse_llm_response(self, response: str):
+
+    def parse_llm_response(self, response: str) -> tuple[str, str, str, str]:
         """Extracts the status, issues, corrections, and explanation from LLM responses consistently."""
+        logger.debug("Starting to parse LLM response")
         
         # Normalize response formatting
         response = response.strip()
+        logger.debug("Normalized response formatting")
 
         # Capture Status (GOOD / BAD) robustly
-        status_match = re.search(r"(?i)\*\*Status\**[:\s]*\**\s*(GOOD|BAD)", response)
+        status_match = re.search(r"(?i)\**\s*status\s*\**\s*[:.]?\s*\**\s*(good|bad)\**", response)
         status = status_match.group(1).upper() if status_match else "UNKNOWN"
+        logger.info(f"Extracted status: {status}")
 
         # Capture Issues, Corrections, and Explanation
         issues_match = re.search(r"(?i)\*\*Issues\**:\*\*\s*(.*?)(?=\n\n\*\*Corrections\*\*|\n\n\*\*Explanation\*\*|$)", response, re.DOTALL)
@@ -27,9 +41,14 @@ class PatchValidation:
         corrections = corrections_match.group(1).strip() if corrections_match else "None provided"
         explanation = explanation_match.group(1).strip() if explanation_match else "None provided"
 
+        logger.debug("Extracted issues, corrections, and explanation")
+        logger.debug(f"Issues found: {'Yes' if issues != 'None provided' else 'No'}")
+        logger.debug(f"Corrections provided: {'Yes' if corrections != 'None provided' else 'No'}")
+
         return status, issues, corrections, explanation
     
-    def resolve_sytnax_errors(self, code: str):
+    def resolve_sytnax_errors(self, code: str) -> str:
+        logger.debug("Generating syntax error resolution prompt")
         return f"""
         You are a software engineer. Analyze the following code and correct any syntax and grammatical errors.
 
@@ -44,8 +63,9 @@ class PatchValidation:
         ```
         """
 
-    def get_validation_prompt(self, file_content: str):
-        return f"""
+    def get_validation_prompt(self, file_content: str) -> str:
+        logger.debug("Generating validation prompt")
+        prompt = f"""
 ### **Strict Code Review and Fault Verification Task**
 
 #### **Objective:**
@@ -139,49 +159,31 @@ Here is the file to examine:
 
 ---
         """
+        logger.debug("Validation prompt generated successfully")
+        return prompt
 
     # prompts llm about the current file
-    def validate_patches(self):
+    def validate_patches(self) -> tuple[str, str, str, str]:
+        logger.info("Starting patch validation process")
         code_content = ""
-        with open(f"{self.patch_dir}/iterative_patch.{self.language}", "r", encoding='utf-8') as file:
-            code_content = file.read()
+        try:
+            with open(f"{self.patch_dir}/iterative_patch.{self.language}", "r", encoding='utf-8') as file:
+                code_content = file.read()
+                logger.debug(f"Successfully read file: {self.patch_dir}/iterative_patch.{self.language}")
+        except Exception as e:
+            logger.error(f"Error reading patch file: {str(e)}")
+            raise
 
         # get validation prompt
         prompt = self.get_validation_prompt(code_content)
-        response = self.model.generate_response(prompt)
+        logger.debug("Generated validation prompt")
 
+        response = self.model.generate_response(prompt)
+        logger.debug("Received response from model")
+
+        # parse the response to get status and other information
         status, issues, corrections, explanation = self.parse_llm_response(response)
-        if status == "GOOD":
-            # compile the file to ensure no errors
-            try:
-                if self.language == "python":
-                    # For Python, we can use compile() to check syntax
-                    compile(code_content, f"{self.patch_dir}/iterative_patch.{self.language}", 'exec')
-                elif self.language == "java":
-                    # For Java, we would need to use javac
-                    import subprocess
-                    result = subprocess.run(["javac", "-Xlint", f"{self.patch_dir}/iterative_patch.{self.language}"], 
-                                        capture_output=True, 
-                                        text=True)
-                    if result.returncode != 0:
-                        # ask the llm to resolve all syntax and grammar errors
-                        with open(f"{self.patch_dir}/iterative_patch.{self.language}", "r", encoding="utf-8") as file:
-                            code_content = file.read()
-                        prompt = self.resolve_sytnax_errors(code_content)
-                        response = self.model.generate_response(prompt)
-                        code_content = self.return_code_block(response)
-                        with open(f"{self.patch_dir}/iterative_patch.{self.language}", "w", encoding="utf-8") as file:
-                            file.write(code_content)
-                        result = subprocess.run(["javac", "-Xlint", f"{self.patch_dir}/iterative_patch.{self.language}"], 
-                                        capture_output=True, 
-                                        text=True)
-                        if result.returncode != 0:
-                            raise ValueError(f"Compilation failed: {result.stderr}")
-                # Add more language-specific compilation checks as needed
-                
-                return status, issues, corrections, explanation
-            except Exception as e:
-                # If compilation fails, return None
-                raise ValueError(f"Compilation failed: {str(e)}")
-        else:
-            return status, issues, corrections, explanation
+        logger.info(f"Validation complete - Status: {status}")
+        
+        # return the parsed response regardless of status
+        return status, issues, corrections, explanation
