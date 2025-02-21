@@ -5,6 +5,7 @@ import os
 import logging
 from pathlib import Path
 import litellm
+from dotenv import load_dotenv
 
 # Configure logging
 logging.basicConfig(
@@ -21,13 +22,17 @@ class Model:
         logger.debug(f"Config path set to: {self.config_path}")
         self.model_configs: Dict[str, Any] = self._load_model_configs()
 
+        # load api key from .env
+        load_dotenv()
+        openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+
         # if test true then set model to test model
         if test:
             logger.info("Initializing in test mode")
             self.model: str = "meta-llama/llama-3-8b-instruct:free"
             self.provider: str = "openrouter"
             self.api_key: str = os.getenv("OPENROUTER_API_KEY", 
-                "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")
+                openrouter_api_key)
             logger.debug(f"Test mode settings - Model: {self.model}, Provider: {self.provider}")
         else:
             logger.info("Initializing in production mode")
