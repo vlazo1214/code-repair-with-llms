@@ -5,6 +5,7 @@ from app.core.session_manager import SessionManager
 import aiofiles
 import os
 import bson
+import json
 
 class WebSocketHandler:
     '''
@@ -18,54 +19,43 @@ class WebSocketHandler:
         self.pending_files = {}
         self.CONNECTED = True
 
-    """
-    The BSON message from front end requires
-
-     - action : either being READY_FOR_FILE || TEXT_MESSAGE
-            - This is to allow the backend to understand between the two types of data transfers
-    """
     async def handle_connection(self, websocket: WebSocket):
+        '''
+        
+        '''
 
-        # without relying on query_params directly
         await websocket.accept()
-        session_id = websocket.query_params.get("session_id")
-        self.connection_manager.connect(websocket, session_id)
+        session_token = websocket.query_params.get("session_token")
+        self.connection_manager.connect(websocket, session_token)
 
         try:
             # While connected to 
             while self.CONNECTED:
 
-                session_id = websocket.query_params.get("session_id")
-                self.check_session_id(websocket, session_id)
+                # Checks for valid session
+                session_token = websocket.query_params.get("session_token")
+                await self.check_session_id(websocket, session_token)
 
-                data = await websocket.receive_bytes()
-                message = bson.BSON(data).decode()
+                # Receive WebSocket data
+                data = await websocket.receive()
+                print(f"Received data: {data}")
 
-                if message.get("action") == "READY_FOR_FILE":
-
-                    if session_id in self.pending_files:
-                        await self.send_file(websocket, self.pending_files)
-                        del self.pending_files
-                    else:
-                        await self.send_bson(websocket, {"type": "message", "content": "No file available yet."})
-            
-                elif message.get("action") == "TEXT_MESSAGE":
-                    
-                    text_message = message.get("content", "")
-                    await self.send_bson(websocket, {"type": "message", "content": f"Server received: {text_message}"})
+                response = {"type": "message", "content": f"Server received: {data}"}
+                await websocket.send_text(f"From the Server {data.get('text')}")
 
         except WebSocketDisconnect:
             self.connection_manager.disconnect(websocket)
             print("Client disconnected")
 
-    async def check_session_id(self, websocket: WebSocket, session_id: str) -> bool:
-          
-            if not session_id:
+    async def check_session_id(self, websocket: WebSocket, session_token: str) -> bool:
+
+            print(f"DEBUG: Received session_token: {session_token}")
+            if not session_token:
                 self.connection_manager.disconnect(websocket)
                 await websocket.close(code=4001, reason="Session ID is missing")
                 return
             
-            if not self.session_manager.validate_session(session_id):
+            if not self.session_manager.validate_session(session_token):
                 self.connection_manager.disconnect(websocket)
                 await websocket.close(code=4002, reason="Invalid or expired session ID")
                 return
@@ -84,7 +74,7 @@ class WebSocketHandler:
             await websocket.send_text(f"START_FILE_TRANSFER: {filename}")
 
             async with aiofiles.open(file_path, "rb") as file:
-                file_data = await file.read
+                file_data = await file.read()
 
             bson_data = bson.BSON.encode({
                 "type": "file",
@@ -98,7 +88,7 @@ class WebSocketHandler:
             await self.send_bson(websocket, {"type": "error", "content": str(e)})
 
     
-    def notify_new_file(self, session_id: str, file_path: str):
+    def notify_new_file(self, session_token: str, file_path: str):
         """
             Called by the LLM when new files of code snippets are available and ready
         """
