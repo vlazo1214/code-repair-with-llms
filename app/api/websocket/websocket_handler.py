@@ -12,7 +12,6 @@ class WebSocketHandler:
         Handles individual websockets
     '''
 
-
     def __init__(self, session_manager: SessionManager):
         self.connection_manager = WebSocketConnectionManager()
         self.session_manager = session_manager
