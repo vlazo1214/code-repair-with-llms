@@ -1,6 +1,6 @@
 import re
 import logging
-from typing import Optional, Any
+from typing import Optional, Any, List
 
 # Configure logging
 logging.basicConfig(
@@ -19,7 +19,7 @@ class PatchValidation:
         logger.debug(f"Initialized with patch_dir: {patch_dir}, language: {language}")
 
 
-    def parse_llm_response(self, response: str):
+    def parse_llm_response(self, response: str) -> tuple[str, str, str, str]:
         """Extracts the status, issues, corrections, and explanation from LLM responses consistently."""
         logger.debug("Starting to parse LLM response")
         
@@ -46,7 +46,8 @@ class PatchValidation:
         logger.debug(f"Corrections provided: {'Yes' if corrections != 'None provided' else 'No'}")
 
         return status, issues, corrections, explanation
-    def resolve_sytnax_errors(self, code: str):
+    
+    def resolve_sytnax_errors(self, code: str) -> str:
         logger.debug("Generating syntax error resolution prompt")
         return f"""
         You are a software engineer. Analyze the following code and correct any syntax and grammatical errors.
@@ -62,7 +63,7 @@ class PatchValidation:
         ```
         """
 
-    def get_validation_prompt(self, file_content: str):
+    def get_validation_prompt(self, file_content: str) -> str:
         logger.debug("Generating validation prompt")
         prompt = f"""
 ### **Strict Code Review and Fault Verification Task**
@@ -162,7 +163,7 @@ Here is the file to examine:
         return prompt
 
     # prompts llm about the current file
-    def validate_patches(self):
+    def validate_patches(self) -> tuple[str, str, str, str]:
         logger.info("Starting patch validation process")
         code_content = ""
         try:

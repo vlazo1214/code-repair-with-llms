@@ -11,7 +11,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class PatchGeneration:
-    def __init__(self, model: Any, file_contents: str, patterns: List[str], language) -> None:
+    def __init__(self, model: Any, file_contents: str, patterns: List[str], language: str) -> None:
         logger.info("Initializing PatchGeneration")
         self.model = model
         self.patterns = patterns
