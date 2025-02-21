@@ -1,0 +1,44 @@
+{
+    "models": {
+        "meta-llama/Meta-Llama-3-8B-Instruct": {
+            "max_context": 8192,
+            "max_response": 4096,
+            "temperature": 0.7,
+            "top_k": 50,
+            "top_p": 0.95,
+            "description": "Llama 3 8B Instruct Model"
+        },
+        "meta-llama/llama-3-8b-instruct:free": {
+            "max_context": 8192,
+            "max_response": 4096,
+            "temperature": 0.7,
+            "top_k": 50,
+            "top_p": 0.95,
+            "description": "Llama 3 8B Instruct Model"
+        },
+        "deepseek/deepseek-r1-distill-llama-70b:free": {
+            "max_context": 128000,
+            "max_response": 128000,
+            "temperature": 0.7,
+            "top_k": 50,
+            "top_p": 0.95,
+            "description": "Llama 3 8B Instruct Model"
+        },
+        "accounts/eriktajti-a69f1e/deployedModels/my-lora-llama31-8b-b6df4d49": {
+            "max_context": 8192,
+            "max_response": 4096,
+            "temperature": 0.7,
+            "top_k": 50,
+            "top_p": 0.95,
+            "description": "Llama 3 8B Instruct Model"
+        },
+        "google/gemini-2.0-flash-001": {
+            "max_context": 1000000,
+            "max_response": 8000,
+            "temperature": 0.7,
+            "top_k": 50,
+            "top_p": 0.95,
+            "description": "Llama 3 8B Instruct Model"
+        }
+    }
+}
