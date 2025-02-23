@@ -11,15 +11,21 @@ class SessionManager:
     Manages user sessions
     """
 
-    def __init__(self, secret_key: str, algorithm: str, upload_dir: Path, token_expiration_minutes: int = 60):
+    def __init__(self, secret_key: str, algorithm: str, upload_dir: Path, token_expiration_minutes: int = 60, model: any = "open_ai"):
         self.secret_key = secret_key
         self.algorithm = algorithm
         self.upload_dir = upload_dir
+        self.model = model
         self.token_expiration_minutes = token_expiration_minutes
 
         self.upload_dir.mkdir(parents=True, exist_ok=True)
 
-    def create_session(self, selected_steps: List[int]) -> str:
+    '''
+    ##############################
+    Remove open_ai within the model param
+    ##############################
+    '''
+    def create_session(self, selected_steps: List[int], model: any = "open_ai") -> str:
 
         now = datetime.now(tz=timezone.utc)
 
@@ -30,6 +36,7 @@ class SessionManager:
             "iat": now,
             "sub": str(os.urandom(16).hex()),
             "selected_steps": selected_steps,
+            "model": model,
         }
 
         token = jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
@@ -89,7 +96,23 @@ class SessionManager:
         except JWTError:
             raise HTTPException(status_code=401, detail="Invalid or expired token")
         
+    def get_model(self, token: str) -> any:
     
+        if not token:
+            raise HTTPException(status_code=400, detail="Token is required")
+        
+        try:
+            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+            model = payload.get("model")
+
+            if not model:
+                raise HTTPException(status_code=400, detail="Invalid token payload")
+
+            return model
+        
+        except JWTError:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+
     def delete_session(self, session_id: str) -> None:
 
         session_path = self.upload_dir / session_id

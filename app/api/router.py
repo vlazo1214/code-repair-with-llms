@@ -8,5 +8,5 @@ from app.core.session_manager import SessionManager
 def api_router(session_manager: SessionManager) -> APIRouter:
     api_router = APIRouter()
     api_router.include_router(initiate_pipeline(session_manager), prefix="/api", tags=["Files"])
-
+    api_router.include_router(run_pipeline(session_manager), prefix="/api")
     return api_router
