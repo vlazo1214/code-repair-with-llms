@@ -50,7 +50,8 @@ class Pipeline:
     def pattern_matching(self, localization: str) -> Any:
         pm = PatternMatch(self.model, self.rag, localization)
         pm.execute_pattern_matching()
-        return pm.get_matches()
+        pm.get_matches()
+        return pm.pattern_matching
 
     # third stage creates the patches and places them in the code
     def patch_generation(self, precode_content: str, patterns: List[str], output_dir: str = "patch_candidates") -> str:
@@ -118,7 +119,7 @@ def main() -> None:
 
     pipeline.set_model(test=True)
 
-    file_path = "C:\\Users\\Gavin Cruz\\Documents\\SD1\\finalspace\\code-repair-with-llms\\javafile.java" # for others change this to your file path
+    file_path = "C:\\Users\\micha\\OneDrive\\Desktop\\Projects\\code-repair-with-llms\\javafile.java" # for others change this to your file path
     with open(file_path, 'r') as file:
         code_content = file.read()
 

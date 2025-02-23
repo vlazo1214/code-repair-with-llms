@@ -16,6 +16,7 @@ class PatternMatch:
         self.rag = rag
         self.fault_plan = fault_plan
         self.patterns: List[str] = []
+        self.pattern_matching: List[str] = None
 
     def get_prompt(self, fault: str, context: str) -> str:
         logger.debug("Generating prompt with fault and context")
@@ -43,9 +44,9 @@ class PatternMatch:
         Ensure the output follows this format exactly and does not include any references to the provided fault or context.
         """
 
-    def get_matches(self) -> List[str]:
+    def get_matches(self) -> None:
         logger.debug("Returning patterns list")
-        return self.patterns
+        self.pattern_matching = self.patterns
     
     def extract_faults(self, input_string: str) -> List[str]:
         logger.debug("Extracting faults from input string")
