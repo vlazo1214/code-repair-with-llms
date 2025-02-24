@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 fastapi
 uvicorn[standard]
 python-multipart
@@ -8,11 +7,9 @@ websockets
 python-jose
 aiofiles
 bson
-=======
 #faiss==1.5.3       needs correction
 huggingface_hub==0.25.1
 langchain_text_splitters==0.3.6
 numpy==2.2.3
 sentence_transformers==3.4.1
 transformers==4.45.1
->>>>>>> pv2.1

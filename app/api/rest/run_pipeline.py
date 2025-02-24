@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, Query
-from typing import List
 from app.core.session_manager import SessionManager
 from app.pipeline import Pipeline
 
@@ -19,20 +18,22 @@ def run_pipeline(session_manager: SessionManager) -> APIRouter:
         Returns:
         - Run_Status: Boolean if run startup was successful
         '''
+        
+        pipeline_status = False
 
         # Validate session token of user
         session_id = session_manager.validate_session(session_token)
         if not session_id:
-            return False
+            return pipeline_status
         
         # Get File Path of Users files
         file_path = session_manager.get_session_path(session_id=session_id)
         if not file_path:
-            return False
+            return pipeline_status
         
         model = session_manager.get_model(session_token)
         if not model:
-            return False
+            return pipeline_status
         
         # Initialize and run the pipeline
         try:

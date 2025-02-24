@@ -35,7 +35,7 @@ session_manager = SessionManager(
 websocket_manager = WebSocketHandler((session_manager))
 
 # For REST Api's 
-app.include_router(api_router(session_manager))
+app.include_router(api_router(session_manager, websocket_connection_manager=websocket_manager))
 
 # Websocket listener for continued connection to backend
 @app.websocket("/start-llm-session")

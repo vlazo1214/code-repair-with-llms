@@ -88,11 +88,17 @@ class WebSocketHandler:
             await self.send_bson(websocket, {"type": "error", "content": str(e)})
 
     
-    def notify_new_file(self, session_token: str, file_path: str):
+    def notify_new_file(self, file_path: str):
         """
             Called by the LLM when new files of code snippets are available and ready
         """
         self.pending_files = file_path
+
+    def get_files(self):
+        '''
+            Returns files from pending files
+        '''
+        return self.pending_files
 
     async def send_bson(self, websocket: WebSocket, message: dict):
         """
