@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List
 from app.core.session_manager import SessionManager
+from app.pipeline import Pipeline
 
 def run_pipeline(session_manager: SessionManager) -> APIRouter:
-
     api_router = APIRouter()
 
     @api_router.post("/run-pipeline")
@@ -34,13 +34,30 @@ def run_pipeline(session_manager: SessionManager) -> APIRouter:
         if not model:
             return False
         
-        # Forward File path into Pipeline Class and run
-        
-        # pipeline = Pipeline(file_path, model, session_token)
-        # pipeline_status = pipeline.start()
+        # Initialize and run the pipeline
+        try:
+            pipeline = Pipeline()
+            pipeline.set_model(model_selection=model)
+            pipeline.set_rag()
 
+            with open(file_path, 'r') as file:
+                code_content = file.read()
 
-        # if successful return True else False
-        return pipeline_status
+            # Embed code
+            code_files = [{"filename": file_path, "content": code_content}]
+            pipeline.rag.embed_code(code_files)
+
+            # Run the steps
+            localization = pipeline.fault_localization(code_content)
+            patterns = pipeline.pattern_matching(localization)
+            patch_dir = pipeline.patch_generation(code_content, patterns)
+            status, issues, corrections, explanation = pipeline.patch_validation(localization)
+
+            # Return True if the pipeline executed successfully
+            return True  
+
+        except Exception as e:
+            print(f"Pipeline execution error: {e}")
+            return False
 
     return api_router
