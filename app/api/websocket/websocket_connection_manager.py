@@ -19,3 +19,6 @@ class WebSocketConnectionManager:
             del self.active_connections[session_token]
             print(f"Connection removed for session: {session_token}")
 
+    def get_websocket(self, session_token: str) -> WebSocket:
+        return self.active_connections.get(session_token)
+

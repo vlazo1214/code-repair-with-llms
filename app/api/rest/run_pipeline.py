@@ -36,7 +36,7 @@ def run_pipeline(session_manager: SessionManager) -> APIRouter:
         
         # Forward File path into Pipeline Class and run
         
-        # pipeline = Pipeline(file_path, model)
+        # pipeline = Pipeline(file_path, model, session_token)
         # pipeline_status = pipeline.start()
 
 

@@ -2,6 +2,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from app.api.websocket.websocket_connection_manager import WebSocketConnectionManager
 from app.core.session_manager import SessionManager
 
+import asyncio
 import aiofiles
 import os
 import bson
@@ -99,3 +100,25 @@ class WebSocketHandler:
         """
         bson_data = bson.BSON.encode(message)
         await websocket.send_bytes(bson_data)
+
+    async def _send_text_async(self, websocket: WebSocket, message: str):
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+
+        async def send():
+            try:
+                await websocket.send_text(str)
+            except WebSocketDisconnect:
+                self.connection_manager.disconnect(websocket)
+                print("Client disconnected")
+
+        self.loop.run_until_complete(send())
+
+    def send_text(self, websocket: WebSocket, message: str):
+        try:
+            future = asyncio.run_coroutine_threadsafe(self._send_text_async(websocket=websocket, message=message))
+            response = future.result()
+            return response
+        except Exception as e:
+            print(f"Error in _send_message_async: {e}")
+            return None
