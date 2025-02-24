@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from app.core.session_manager import SessionManager
-from app.pipeline import Pipeline
+from backend.source.pipeline.pipeline import Pipeline
 
 def run_pipeline(session_manager: SessionManager) -> APIRouter:
     api_router = APIRouter()
